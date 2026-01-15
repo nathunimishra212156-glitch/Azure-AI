@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Message, MessageRole, UserRole } from '../types';
-import { chatWithSearch, analyzeImageAndCode } from '../services/geminiService';
+import { Message, MessageRole } from '../types';
+import { chatWithSearch } from '../services/geminiService';
 
 interface ChatInterfaceProps {
   onMessageSent?: (title: string) => void;
@@ -12,50 +12,56 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onMessageSent, currentUse
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
 
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
   const handleSend = async (forcedInput?: string) => {
     const finalInput = forcedInput || input;
-    if (!finalInput.trim() && !selectedImage) return;
+    if (!finalInput.trim() || isLoading) return;
 
     const query = finalInput.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
       role: MessageRole.USER,
       content: query,
-      timestamp: Date.now(),
-      image: selectedImage || undefined
+      timestamp: Date.now()
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setSelectedImage(null);
     setIsLoading(true);
 
     try {
-      let responseText = '';
-      if (userMessage.image) {
-        responseText = await analyzeImageAndCode(userMessage.image, query || "Perform visual analysis.");
-      } else {
-        // If user is Admin, we add architectural context to the prompt
-        const finalPrompt = currentUser?.role === 'Administration' 
-          ? `[High Architect Context] User is the High Architect of Nexus. Respond with deep technical rigor and blueprint-level detail. \n\nQuery: ${query}` 
-          : query;
-          
-        const result = await chatWithSearch(finalPrompt);
-        responseText = result.text;
-      }
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: MessageRole.MODEL, content: responseText, timestamp: Date.now() }]);
-      if (onMessageSent) onMessageSent(query.slice(0, 30) + "...");
+      const { text, links } = await chatWithSearch(query);
+      const modelMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: MessageRole.MODEL,
+        content: text,
+        timestamp: Date.now(),
+        groundingLinks: links
+      };
+      setMessages(prev => [...prev, modelMessage]);
+      if (onMessageSent) onMessageSent(query.slice(0, 30));
     } catch (error) {
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: MessageRole.MODEL, content: "Synthesis Failed: Neural link severed. Retry protocol.", timestamp: Date.now() }]);
+      setMessages(prev => [...prev, { 
+        id: Date.now().toString(), 
+        role: MessageRole.MODEL, 
+        content: "CRITICAL: Neural uplink failure. Retrying synthesis sequence...", 
+        timestamp: Date.now() 
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -63,88 +69,128 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onMessageSent, currentUse
 
   return (
     <div className="flex flex-col h-full relative">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-10 space-y-16 custom-scrollbar pb-40">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 md:px-16 py-8 space-y-12 custom-scrollbar pb-52">
         {messages.length === 0 && (
-          <div className="max-w-4xl mx-auto space-y-20 py-10 animate-astral">
-            <div className="space-y-8 text-center md:text-left">
-              <h1 className="text-8xl md:text-[120px] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-indigo-500 via-purple-500 to-white leading-[0.85] uppercase">SYNTHESIS.</h1>
-              <p className="text-slate-500 text-[12px] font-black uppercase tracking-[0.6em] leading-relaxed max-w-2xl">
-                {currentUser?.role === 'Administration' ? 'Nexus Cosmic Architect Terminal' : 'Built by Kshitiz Mishra | World-class engineering intelligence.'}
+          <div className="max-w-7xl mx-auto space-y-16 animate-astral pt-12">
+            <div className="space-y-6 text-center md:text-left">
+              <h1 className="text-8xl md:text-9xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 uppercase italic leading-none">
+                AZURE<br/><span className="text-white/90">ULTRA.</span>
+              </h1>
+              <p className="text-slate-500 text-[12px] font-black uppercase tracking-[0.8em] ml-2">
+                Engineering Deck • Kshitiz Mishra Labs
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
-              <button onClick={() => handleSend("Perform a deep-dive analysis of a complex Rust snippet. Identify lifetime conflicts.")} className="w-full bg-[#0a0a0f]/60 border border-white/5 p-12 rounded-[3rem] text-left group hover:border-indigo-500/40 transition-all flex flex-col gap-8 shadow-2xl backdrop-blur-2xl">
-                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-2">Polyglot Analysis</h4>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Rust • Go • Python • TS Mastery</p>
-                </div>
-              </button>
-
-              <button onClick={() => handleSend("Audit the security logic for race conditions in shared state access.")} className="w-full bg-[#0a0a0f]/60 border border-white/5 p-12 rounded-[3rem] text-left group hover:border-purple-500/40 transition-all flex flex-col gap-8 shadow-2xl backdrop-blur-2xl">
-                <div className="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-2">Security Audit</h4>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Vulnerability Scanning</p>
-                </div>
-              </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { title: "HTML5/REACT", label: "UI SYNTHESIS", query: "Generate a high-end React dashboard with Tailwind", color: "from-cyan-500" },
+                { title: "C#/ASP.NET", label: "LOGIC ARCH", query: "Advanced C# middleware for secure logging", color: "from-blue-500" },
+                { title: "PYTHON/AI", label: "NEURAL DATA", query: "Python script for data visualization with Matplotlib", color: "from-indigo-500" }
+              ].map((item, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => handleSend(item.query)} 
+                  className="bg-[#0a0a14] border border-white/5 p-8 rounded-[2.5rem] text-left hover:border-blue-500/40 transition-all group relative overflow-hidden"
+                >
+                  <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${item.color} to-transparent opacity-50`}></div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{item.label}</p>
+                  <p className="text-[14px] text-white font-bold group-hover:text-blue-400 transition-colors">{item.title}</p>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        <div className="max-w-3xl mx-auto w-full space-y-12">
+        <div className="max-w-7xl mx-auto w-full space-y-10">
           {messages.map((m) => (
-            <div key={m.id} className={`flex gap-8 animate-astral ${m.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div className={`flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center mt-1 border ${m.role === MessageRole.USER ? 'bg-white/5 border-white/10' : 'bg-indigo-600 border-white/20'}`}>
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {m.role === MessageRole.USER ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  )}
-                </svg>
-              </div>
-              <div className={`px-8 py-6 rounded-[2.5rem] text-[16px] leading-relaxed max-w-[85%] font-medium ${m.role === MessageRole.USER ? 'bg-indigo-600/10 border border-indigo-500/10 text-slate-200 shadow-xl' : 'bg-white/5 border border-white/5 text-slate-300 shadow-xl'}`}>
-                <div className="whitespace-pre-wrap">{m.content}</div>
+            <div key={m.id} className={`flex ${m.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
+              <div className={`px-8 py-6 rounded-[2.5rem] shadow-2xl ${m.role === MessageRole.USER ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-medium max-w-[80%]' : 'bg-[#0d0d1a]/80 backdrop-blur-xl border border-white/5 text-slate-300 w-full'}`}>
+                <div className="prose prose-invert max-w-none text-[15px] leading-relaxed font-sans">
+                   {m.content.split('```').map((part, i) => {
+                     if (i % 2 === 1) {
+                       const lines = part.split('\n');
+                       const lang = lines[0].trim();
+                       const code = lines.slice(1).join('\n');
+                       const codeId = `code-${m.id}-${i}`;
+                       
+                       return (
+                         <div key={i} className="relative group/code my-8 shadow-2xl">
+                           <div className="flex items-center justify-between bg-white/5 px-6 py-3 rounded-t-[1.5rem] border-t border-x border-white/10">
+                             <div className="flex items-center gap-3">
+                               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{lang || 'CODE'}</span>
+                             </div>
+                             <button 
+                               onClick={() => copyToClipboard(code, codeId)}
+                               className="px-4 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-[9px] font-black transition-all border border-white/10"
+                             >
+                               {copiedId === codeId ? (
+                                 <span className="text-green-400 uppercase tracking-widest">COPIED</span>
+                               ) : (
+                                 <span className="text-blue-400 uppercase tracking-widest">COPY TO CLIPBOARD</span>
+                               )}
+                             </button>
+                           </div>
+                           <pre className="bg-black/60 p-8 rounded-b-[1.5rem] overflow-x-auto border-b border-x border-white/10 font-mono text-[14px] text-cyan-300 custom-scrollbar leading-relaxed">
+                             {code}
+                           </pre>
+                         </div>
+                       );
+                     }
+                     return <span key={i} className="whitespace-pre-wrap">{part}</span>;
+                   })}
+                </div>
+                {m.groundingLinks && m.groundingLinks.length > 0 && (
+                  <div className="mt-10 pt-6 border-t border-white/5">
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.6em] mb-4">Verification Sources</p>
+                    <div className="flex flex-wrap gap-3">
+                      {m.groundingLinks.map((link, idx) => (
+                        <a key={idx} href={link.uri} target="_blank" rel="noopener noreferrer" className="bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 px-5 py-2.5 rounded-2xl text-[11px] text-blue-400 font-bold transition-all flex items-center gap-2">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                          {link.title}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
           {isLoading && (
-            <div className="flex gap-8 items-center px-4">
-               <div className="flex space-x-2">
-                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
-                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.1s]"></div>
-                 <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.2s]"></div>
-               </div>
-               <span className="text-[11px] font-black text-slate-800 uppercase tracking-[0.5em]">Synthesizing...</span>
+            <div className="flex items-center gap-4 p-6 bg-[#0d0d1a] border border-white/5 rounded-[2rem] w-fit shadow-2xl">
+               <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+               <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em]">Azure Processing Logic...</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="absolute bottom-10 left-0 right-0 px-6 pointer-events-none">
-        <div className="max-w-3xl mx-auto pointer-events-auto">
-          <div className="bg-[#11111c]/90 backdrop-blur-3xl rounded-full border border-white/5 focus-within:border-indigo-500/40 shadow-[0_40px_80px_rgba(0,0,0,0.6)] pl-10 pr-3 py-3 flex items-center gap-4 group">
+      <div className="absolute bottom-10 left-0 right-0 px-6 md:px-16 z-30">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-[#0a0a14]/90 backdrop-blur-3xl rounded-[3rem] border border-white/10 p-3 flex items-center gap-4 shadow-[0_40px_80px_rgba(0,0,0,0.6)] group-focus-within:border-blue-500/30 transition-all">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder="Uplink logic demand..."
-              className="flex-1 bg-transparent border-none text-slate-100 outline-none py-3 resize-none max-h-32 text-[16px] placeholder:text-slate-800 font-medium"
+              onKeyDown={(e) => { 
+                if (e.key === 'Enter' && !e.shiftKey) { 
+                  e.preventDefault(); 
+                  handleSend(); 
+                } 
+              }}
+              placeholder="Inject architectural demand or code query..."
+              className="flex-1 bg-transparent border-none text-slate-100 outline-none px-8 py-4 text-[16px] font-medium placeholder:text-slate-700 resize-none max-h-48 min-h-[64px] custom-scrollbar"
               rows={1}
             />
             <button
               onClick={() => handleSend()}
-              disabled={isLoading || !input.trim()}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isLoading || !input.trim() ? 'bg-white/5 text-slate-800' : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white hover:scale-105 active:scale-95 shadow-xl shadow-indigo-900/40'}`}
+              className="w-16 h-16 rounded-[2rem] flex items-center justify-center bg-gradient-to-br from-cyan-500 to-indigo-600 text-white shadow-2xl hover:scale-105 active:scale-95 transition-all flex-shrink-0 group"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+              <svg className="w-7 h-7 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 5l7 7-7 7" /></svg>
             </button>
+          </div>
+          <div className="flex justify-between px-10 mt-5">
+             <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest italic">Encrypted Connection: SHA-512</span>
+             <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest">Azure AI Engine v3.0</span>
           </div>
         </div>
       </div>
