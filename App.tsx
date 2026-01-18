@@ -16,7 +16,12 @@ const App: React.FC = () => {
   
   const [history, setHistory] = useState<Array<{id: string, title: string, date: number, type: 'chat' | 'cmd'}>>([]);
 
-  // Load persistence data on mount
+  const appUpdates = [
+    { version: 'v4.6.0', date: '2025-05-20', detail: 'Stop Response logic & Guest Protocol v2 enabled' },
+    { version: 'v4.5.2', date: '2025-05-15', detail: 'Google Grounding optimized for Kshitiz Coder Nodes' },
+    { version: 'v4.5.0', date: '2025-05-10', detail: 'Full multi-language coding support integrated' }
+  ];
+
   useEffect(() => {
     const session = localStorage.getItem('azure_session_active');
     const savedHistory = localStorage.getItem('azure_history_registry');
@@ -45,11 +50,9 @@ const App: React.FC = () => {
 
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
     const inputUser = username.toLowerCase().trim();
     const inputPass = password.trim();
 
-    // 1. Check Primary Owner Credentials (Hardcoded)
     if (inputUser === 'kshitizmishra' && inputPass === '9845189548') {
       const user = { name: 'KSHITIZ MISHRA', role: 'ROOT', authKey: '9845189548' };
       setCurrentUser(user);
@@ -58,105 +61,58 @@ const App: React.FC = () => {
       return;
     }
 
-    // 2. Check Dynamic Registry (Online/Persistent Data)
     const registeredUsers = JSON.parse(localStorage.getItem('nexus_registered_users') || '[]');
-    const foundUser = registeredUsers.find((u: any) => 
-      u.name.toLowerCase() === inputUser && u.authKey === inputPass
-    );
+    const foundUser = registeredUsers.find((u: any) => u.name.toLowerCase() === inputUser && u.authKey === inputPass);
     
     if (foundUser) {
       setCurrentUser(foundUser);
       setIsAuthorized(true);
       localStorage.setItem('azure_session_active', JSON.stringify(foundUser));
     } else {
-      setError('AUTH_ERROR: IDENTITY NOT FOUND OR KEY MISMATCH');
-      // Shake effect or feedback could be added here
+      setError('AUTH_ERROR: ACCESS DENIED');
     }
+  };
+
+  const handleGuestAccess = () => {
+    const guestUser = { name: 'GUEST_OPERATOR', role: 'VIP Guest', authKey: 'GUEST_MODE' };
+    setCurrentUser(guestUser);
+    setIsAuthorized(true);
+    localStorage.setItem('azure_session_active', JSON.stringify(guestUser));
   };
 
   const handleLogout = () => {
     localStorage.removeItem('azure_session_active');
     setCurrentUser(null);
     setIsAuthorized(false);
+    setActiveTab('chat');
     setUsername('');
     setPassword('');
-    setError('');
-    setActiveTab('chat');
-  };
-
-  const handleGuestLogin = () => {
-    const guest = { name: 'GUEST_OPERATOR', role: 'VIP Guest', authKey: 'GUEST_00' };
-    setCurrentUser(guest);
-    setIsAuthorized(true);
-    localStorage.setItem('azure_session_active', JSON.stringify(guest));
   };
 
   if (!isAuthorized) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#05050d] relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-600/10 via-transparent to-black pointer-events-none"></div>
-        
         <div className="w-full max-w-sm space-y-10 animate-astral relative z-10">
           <div className="text-center space-y-4">
             <div className="mx-auto w-24 h-24 bg-gradient-to-br from-cyan-400 to-indigo-600 rounded-[2.5rem] flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.3)] border border-white/10">
-              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </div>
             <div>
-              <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase">AZURE.</h1>
+              <h1 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none">AZURE.</h1>
               <p className="text-blue-500 text-[9px] font-black uppercase tracking-[0.6em] mt-1">Kshitiz Mishra Labs</p>
             </div>
           </div>
-          
           <div className="bg-[#0d0d1a]/90 backdrop-blur-3xl p-8 rounded-[3rem] space-y-6 border border-white/5 shadow-2xl">
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-4">Identity Code</label>
-                <input 
-                  type="text" 
-                  value={username} 
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-[#161625] border border-white/5 text-white rounded-2xl px-6 py-4 outline-none focus:border-blue-500/50 text-sm font-bold transition-all" 
-                  placeholder="USERNAME" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-4">Auth Key</label>
-                <input 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#161625] border border-white/5 text-white rounded-2xl px-6 py-4 outline-none focus:border-blue-500/50 text-sm font-bold transition-all" 
-                  placeholder="••••••••" 
-                />
-              </div>
+              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-[#161625] border border-white/5 text-white rounded-2xl px-6 py-4 outline-none focus:border-blue-500/50 text-sm font-bold" placeholder="USERNAME" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-[#161625] border border-white/5 text-white rounded-2xl px-6 py-4 outline-none focus:border-blue-500/50 text-sm font-bold" placeholder="AUTH KEY" />
             </div>
-            
-            <div className="space-y-3 pt-2">
-              <button 
-                onClick={() => handleLogin()} 
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[12px] uppercase tracking-widest py-4.5 rounded-2xl transition-all shadow-xl active:scale-[0.98] py-4"
-              >
-                INITIALIZE_SESSION
-              </button>
-              <button 
-                onClick={handleGuestLogin} 
-                className="w-full bg-white/5 hover:bg-white/10 text-slate-500 font-black text-[10px] uppercase tracking-widest py-3.5 rounded-2xl border border-white/5 transition-all"
-              >
-                GUEST_UPLINK
-              </button>
+            <div className="space-y-3">
+              <button onClick={() => handleLogin()} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[12px] uppercase tracking-widest py-4.5 rounded-2xl shadow-xl transition-transform active:scale-95">INITIALIZE_SESSION</button>
+              <button onClick={handleGuestAccess} className="w-full bg-white/5 hover:bg-white/10 text-slate-500 font-black text-[10px] uppercase tracking-widest py-3.5 rounded-2xl border border-white/5 transition-all">GUEST_PROTOCOL</button>
             </div>
-            
-            {error && (
-              <p className="text-red-500/80 text-[8px] font-black text-center uppercase tracking-widest mt-2 animate-pulse leading-relaxed">
-                {error}
-              </p>
-            )}
-          </div>
-          
-          <div className="text-center">
-            <p className="text-[8px] font-bold text-slate-800 uppercase tracking-[0.4em]">Online Deployment • Secure Node 01</p>
+            {error && <p className="text-red-500/80 text-[8px] font-black text-center uppercase tracking-widest mt-2">{error}</p>}
           </div>
         </div>
       </div>
@@ -165,25 +121,18 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen flex bg-[#05050d] text-[#e3e3e3] overflow-hidden font-sans">
-      <aside className={`${isSidebarOpen ? 'w-[300px]' : 'w-0'} transition-all duration-500 flex flex-col bg-[#05050d] border-r border-white/5 z-40 overflow-hidden`}>
-        <div className="p-8 space-y-8">
+      <aside className={`${isSidebarOpen ? 'w-[320px]' : 'w-0'} transition-all duration-500 flex flex-col bg-[#05050d] border-r border-white/5 z-40 overflow-hidden`}>
+        <div className="p-8 space-y-8 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </div>
             <div className="flex flex-col">
-              <span className="text-[14px] font-black uppercase tracking-widest italic text-white leading-none">AZURE.CORE</span>
-              <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">PRO_EDITION</span>
+              <span className="text-[14px] font-black uppercase tracking-widest italic text-white leading-none">KSHITIZ.CORE</span>
+              <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">ONLINE_SYNC_ACTIVE</span>
             </div>
           </div>
-          
-          <button 
-            onClick={() => { setActiveTab('chat'); setChatKey(k => k+1); }} 
-            className="w-full py-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-all shadow-xl active:scale-[0.98] border border-white/10"
-          >
-            NEW SYNTHESIS
-          </button>
-          
+          <button onClick={() => { setActiveTab('chat'); setChatKey(k => k+1); }} className="w-full py-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-all shadow-xl active:scale-[0.98] border border-white/10">NEW SYNTHESIS</button>
           <nav className="space-y-1.5">
             {[
               { id: 'chat', label: 'WORKBENCH', icon: 'M4 6h16M4 12h16M4 18h16' },
@@ -191,11 +140,7 @@ const App: React.FC = () => {
               { id: 'update', label: 'SYSTEM_UP', icon: 'M13 10V3L4 14h7v7l9-11h-7z' }
             ].map((nav) => (
               (currentUser?.role === 'ROOT' || nav.id === 'chat') && (
-                <button 
-                  key={nav.id} 
-                  onClick={() => setActiveTab(nav.id as any)} 
-                  className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === nav.id ? 'bg-white/5 text-blue-400 border border-white/5' : 'text-slate-600 hover:bg-white/5'}`}
-                >
+                <button key={nav.id} onClick={() => setActiveTab(nav.id as any)} className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === nav.id ? 'bg-white/5 text-blue-400 border border-white/5' : 'text-slate-600 hover:bg-white/5'}`}>
                   <svg className={`w-4 h-4 ${activeTab === nav.id ? 'text-blue-500' : 'text-slate-700'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={nav.icon} /></svg>
                   {nav.label}
                 </button>
@@ -205,35 +150,40 @@ const App: React.FC = () => {
         </div>
         
         <div className="flex-1 overflow-y-auto px-8 py-2 custom-scrollbar">
-          <p className="text-[8px] font-black text-slate-800 uppercase tracking-[0.4em] mb-4 border-b border-white/5 pb-2">DATA_STREAM_HISTORY</p>
+          <div className="mb-8">
+            <p className="text-[8px] font-black text-blue-500/50 uppercase tracking-[0.4em] mb-4 border-b border-white/5 pb-2">APP_UPDATES_LOG</p>
+            <div className="space-y-3">
+              {appUpdates.map((update, idx) => (
+                <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 group hover:border-blue-500/30 transition-all cursor-default">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[9px] font-black text-white">{update.version}</span>
+                    <span className="text-[7px] font-bold text-slate-600">{update.date}</span>
+                  </div>
+                  <p className="text-[8px] text-slate-400 leading-tight uppercase font-medium">{update.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-[8px] font-black text-slate-800 uppercase tracking-[0.4em] mb-4 border-b border-white/5 pb-2">DATA_HISTORY</p>
           <div className="space-y-1.5">
             {history.map(item => (
-              <button key={item.id} className="w-full text-left py-2 px-3 rounded-lg text-[10px] text-slate-600 hover:text-white truncate transition-all font-bold uppercase tracking-tighter italic hover:bg-white/5">
+              <button key={item.id} className="w-full text-left py-2 px-3 rounded-lg text-[10px] text-slate-600 hover:text-white truncate transition-all font-bold uppercase italic hover:bg-white/5">
                 {item.title}
               </button>
             ))}
-            {history.length === 0 && <p className="text-[9px] text-slate-800 italic uppercase">Buffer Empty</p>}
           </div>
         </div>
         
         <div className="p-8 space-y-4 border-t border-white/5">
           <div className="flex items-center gap-4 bg-[#0a0a14] p-4 rounded-2xl border border-white/5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center font-black text-sm text-white">
-              {currentUser?.name[0]}
-            </div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center font-black text-sm text-white">{currentUser?.name[0]}</div>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-black truncate text-white uppercase tracking-tighter">{currentUser?.name}</p>
               <p className="text-[8px] font-bold text-blue-500 uppercase tracking-widest">{currentUser?.role}</p>
             </div>
           </div>
-          
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-3 py-3.5 bg-white/5 hover:bg-red-500/10 text-slate-600 hover:text-red-400 border border-white/5 hover:border-red-500/20 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            TERMINATE_SESSION
-          </button>
+          <button onClick={handleLogout} className="w-full py-3.5 bg-white/5 hover:bg-red-500/10 text-slate-600 hover:text-red-400 border border-white/5 hover:border-red-500/20 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all">TERMINATE_SESSION</button>
         </div>
       </aside>
 
@@ -244,7 +194,7 @@ const App: React.FC = () => {
           </button>
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-end">
-              <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.6em] italic leading-none">AZURE_CLOUD_NODE</span>
+              <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.6em] italic leading-none">KSHITIZ_CODER_NETWORK</span>
               <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">UPLINK_STABLE</span>
             </div>
             <div className="w-8 h-8 rounded-full border border-white/5 flex items-center justify-center relative overflow-hidden">
@@ -253,7 +203,6 @@ const App: React.FC = () => {
             </div>
           </div>
         </header>
-        
         <div className="flex-1 relative">
           {activeTab === 'chat' && <ChatInterface key={chatKey} onMessageSent={(t) => saveToRegistry(Date.now().toString(), t, 'chat')} currentUser={currentUser} />}
           {activeTab === 'register' && <IdentityRegistryProtocol />}
