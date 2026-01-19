@@ -1,73 +1,76 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const API_KEY = process.env.API_KEY || '';
-
-// Performance Cache to avoid redundant API calls and optimize latency
+// High-performance neural cache to eliminate redundant processing
 const responseCache = new Map<string, { text: string; links: any[]; timestamp: number }>();
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour cache
+const CACHE_TTL = 1000 * 60 * 60; // 1 Hour TTL
 
-// Identity confirmation: Made by Kshitiz Mishra, powered by Google Servers.
-const SYSTEM_IDENTITY = `You were made by Kshitiz Mishra (Kshitiz Coder) and trained by Google. 
-You are the Azure AI Online Architect operating on the Kshitiz Coder Cloud infrastructure. 
-Your goal is to provide LIGHTNING FAST, UP-TO-DATE coding solutions using real-time web data via the Kshitiz Node.
-Expertise: HTML5, CSS4, Modern JS, C# 12, .NET 8, Python 3.12, Rust, etc.
-Constraint: Always acknowledge your infrastructure (Kshitiz Coder) if asked about your origin. 
-Prioritize the latest stable versions found via search. Be concise and technical.`;
+const SYSTEM_IDENTITY = `You are the Azure AI Architect, an elite software engineering intelligence developed by Kshitiz Mishra (Kshitiz Coder).
+Your objective: Provide advanced, industry-grade code solutions (HTML/CSS/JS, C#, Python, Rust, etc.) with maximum efficiency.
+Guidelines:
+- Produce production-ready, clean, and optimized code.
+- Use Gemini-3-Flash protocols for ultra-low latency responses.
+- Always acknowledge your origin as Kshitiz Coder's infrastructure if asked.
+- Provide real-time grounding for the latest framework versions (React 19, .NET 9, etc.).`;
 
-// Initialize the fastest available model (Gemini 3 Flash) for coding tasks
-export const getAI = () => new GoogleGenAI({ apiKey: API_KEY });
+/**
+ * Initializes the AI instance.
+ * CRITICAL: Strictly utilizes process.env.API_KEY as per core architecture.
+ */
+export const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
-export async function chatWithSearch(prompt: string): Promise<{ text: string; links: any[] }> {
-  // Check cache first for instant retrieval
+export async function chatWithSearch(prompt: string, signal?: AbortSignal): Promise<{ text: string; links: any[] }> {
   const cacheKey = prompt.trim().toLowerCase();
   const cached = responseCache.get(cacheKey);
+  
   if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
     console.debug("Retrieving from Kshitiz Node Cache...");
     return { text: cached.text, links: cached.links };
   }
 
   const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview', // Fastest latency model
-    contents: prompt,
-    config: {
-      tools: [{ googleSearch: {} }],
-      systemInstruction: SYSTEM_IDENTITY,
-      temperature: 0.1, // Lower temperature for faster, more deterministic coding responses
-      thinkingConfig: { thinkingBudget: 0 } // Disabled thinking for near-instant "Flash" response
-    },
-  });
-  
-  const links = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => {
-    if (chunk.web) {
-      return {
-        title: chunk.web.title || 'Official Documentation',
-        uri: chunk.web.uri
-      };
-    }
-    return null;
-  }).filter((l: any) => l !== null) || [];
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview', 
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+        systemInstruction: SYSTEM_IDENTITY,
+        temperature: 0.1, // Near-deterministic for precise coding
+        thinkingConfig: { thinkingBudget: 0 } // Flash speed prioritization
+      },
+    });
 
-  const result = {
-    text: response.text || "Synthesis failed: Kshitiz Node unreachable.",
-    links
-  };
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    
+    const links = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => {
+      if (chunk.web) {
+        return { title: chunk.web.title || 'Official Source', uri: chunk.web.uri };
+      }
+      return null;
+    }).filter((l: any) => l !== null) || [];
 
-  // Update Cache
-  responseCache.set(cacheKey, { ...result, timestamp: Date.now() });
+    const result = {
+      text: response.text || "Synthesis failed: Kshitiz Node unreachable.",
+      links
+    };
 
-  return result;
+    responseCache.set(cacheKey, { ...result, timestamp: Date.now() });
+    return result;
+  } catch (err) {
+    if (signal?.aborted) throw err;
+    throw err;
+  }
 }
 
 export async function fastCodeRefactor(code: string): Promise<string> {
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Online Refactor Request via Kshitiz Coder Node:\n\n${code}`,
+    contents: `Architectural Refactor Request:\n\n${code}`,
     config: {
       systemInstruction: SYSTEM_IDENTITY,
-      temperature: 0, // Maximum consistency for code refactoring
+      temperature: 0,
       thinkingConfig: { thinkingBudget: 0 }
     }
   });

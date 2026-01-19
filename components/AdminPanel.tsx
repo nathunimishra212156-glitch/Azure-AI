@@ -20,7 +20,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onCommandExecuted }) => {
     }
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      // Direct use of environment variable as required
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
         contents: architectPrompt,
@@ -103,7 +104,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onCommandExecuted }) => {
             <span className="text-[11px] font-bold text-blue-500 uppercase tracking-widest italic">AZURE ACTIVE</span>
           </div>
         </div>
-        <div className="text-[10px] font-black text-slate-700 uppercase tracking-[0.4em]">Azure AI OS v4.0.0</div>
+        <div className="text-[10px] font-black text-slate-700 uppercase tracking-[0.4em]">Azure AI OS v4.6.2</div>
       </div>
     </div>
   );
