@@ -3,15 +3,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus AI - Synthesis Workbench</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kshitiz Coders - by Kshitiz Mishra</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-          --space-bg: #050508;
-          --nebula-purple: rgba(139, 92, 246, 0.12);
-          --nebula-blue: rgba(59, 130, 246, 0.08);
+          --space-bg: #000000;
         }
         body { 
           font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -19,9 +17,7 @@
           color: #e3e3e3; 
           margin: 0;
           overflow: hidden;
-          background-image: 
-            radial-gradient(circle at 20% 30%, var(--nebula-purple) 0%, transparent 40%),
-            radial-gradient(circle at 80% 70%, var(--nebula-blue) 0%, transparent 40%);
+          -webkit-tap-highlight-color: transparent;
         }
         
         .stars-container {
@@ -45,21 +41,24 @@
           50% { opacity: 0.6; transform: scale(1.2); }
         }
 
-        .glass-panel {
-          background: rgba(15, 15, 20, 0.8);
-          backdrop-filter: blur(24px);
-          border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(12px); }
+          from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .animate-astral { animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-astral { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        input, textarea { font-size: 16px !important; } /* Prevents iOS Zoom */
+
+        .glass {
+          background: rgba(15, 15, 15, 0.7);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
     </style>
 <script type="importmap">
 {
@@ -77,7 +76,7 @@
     <div id="root"></div>
     <script>
         const starsContainer = document.getElementById('stars');
-        for (let i = 0; i < 150; i++) {
+        for (let i = 0; i < 60; i++) {
             const star = document.createElement('div');
             star.className = 'star';
             const size = Math.random() * 1.5 + 0.5;

@@ -1,43 +1,36 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// High-performance neural cache to eliminate redundant processing
-const responseCache = new Map<string, { text: string; links: any[]; timestamp: number }>();
-const CACHE_TTL = 1000 * 60 * 60; // 1 Hour TTL
+const SYSTEM_IDENTITY = `You are the Kshitiz Coders AI Architect, developed by Kshitiz Mishra.
+You are a premier engineering intelligence specialized in high-level coding (React, C#, Python, CSS, etc.).
+Strict Guidelines:
+- If the user is identified as 'Kshitiz Coder', address them as 'Lead Architect' with profound technical respect.
+- Provide elite, production-grade architectural patterns.
+- For all other users (Guests), provide professional, helpful, and highly optimized coding support.
+- Maintain a minimalist, technical, and high-performance persona.
+- Use Gemini-3-Flash for rapid synthesis.
+- When providing code, prioritize modern best practices, clean architecture, and efficiency.`;
 
-const SYSTEM_IDENTITY = `You are the Azure AI Architect, an elite software engineering intelligence developed by Kshitiz Mishra (Kshitiz Coder).
-Your objective: Provide advanced, industry-grade code solutions (HTML/CSS/JS, C#, Python, Rust, etc.) with maximum efficiency.
-Guidelines:
-- Produce production-ready, clean, and optimized code.
-- Use Gemini-3-Flash protocols for ultra-low latency responses.
-- Always acknowledge your origin as Kshitiz Coder's infrastructure if asked.
-- Provide real-time grounding for the latest framework versions (React 19, .NET 9, etc.).`;
-
-/**
- * Initializes the AI instance.
- * CRITICAL: Strictly utilizes process.env.API_KEY as per core architecture.
- */
-export const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+export const getAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.error("CRITICAL ERROR: Gemini API Key is missing from the environment. Ensure API_KEY is set in your deployment settings.");
+  }
+  return new GoogleGenAI({ apiKey: apiKey as string });
+};
 
 export async function chatWithSearch(prompt: string, signal?: AbortSignal): Promise<{ text: string; links: any[] }> {
-  const cacheKey = prompt.trim().toLowerCase();
-  const cached = responseCache.get(cacheKey);
-  
-  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-    console.debug("Retrieving from Kshitiz Node Cache...");
-    return { text: cached.text, links: cached.links };
-  }
-
   const ai = getAI();
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview', 
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         tools: [{ googleSearch: {} }],
         systemInstruction: SYSTEM_IDENTITY,
-        temperature: 0.1, // Near-deterministic for precise coding
-        thinkingConfig: { thinkingBudget: 0 } // Flash speed prioritization
+        temperature: 0.15, // Higher precision for architectural tasks
+        topP: 0.95,
+        topK: 40
       },
     });
 
@@ -45,34 +38,18 @@ export async function chatWithSearch(prompt: string, signal?: AbortSignal): Prom
     
     const links = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => {
       if (chunk.web) {
-        return { title: chunk.web.title || 'Official Source', uri: chunk.web.uri };
+        return { title: chunk.web.title || 'Source', uri: chunk.web.uri };
       }
       return null;
     }).filter((l: any) => l !== null) || [];
 
-    const result = {
-      text: response.text || "Synthesis failed: Kshitiz Node unreachable.",
+    return {
+      text: response.text || "Connection to Kshitiz Coders neural node lost. Check API configuration.",
       links
     };
-
-    responseCache.set(cacheKey, { ...result, timestamp: Date.now() });
-    return result;
-  } catch (err) {
+  } catch (err: any) {
     if (signal?.aborted) throw err;
-    throw err;
+    console.error("Gemini API Error:", err);
+    throw new Error(err.message || "Neural sync failure");
   }
-}
-
-export async function fastCodeRefactor(code: string): Promise<string> {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Architectural Refactor Request:\n\n${code}`,
-    config: {
-      systemInstruction: SYSTEM_IDENTITY,
-      temperature: 0,
-      thinkingConfig: { thinkingBudget: 0 }
-    }
-  });
-  return response.text || code;
 }

@@ -1,30 +1,23 @@
 
 import React, { useState, useEffect } from 'react';
 import ChatInterface from './components/ChatInterface';
-import IdentityRegistryProtocol from './components/IdentityRegistryProtocol';
 import AdminPanel from './components/AdminPanel';
 
 const App: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [currentUser, setCurrentUser] = useState<{name: string, role: string, authKey?: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{name: string, role: string, isOwner: boolean} | null>(null);
   const [error, setError] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0); 
-  const [activeTab, setActiveTab] = useState<'chat' | 'register' | 'update'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'update'>('chat');
   
-  const [history, setHistory] = useState<Array<{id: string, title: string, date: number, type: 'chat' | 'cmd'}>>([]);
-
-  const appUpdates = [
-    { version: 'v4.7.0', date: '2025-05-25', detail: 'Mobile-Desktop Hybrid UI Synced' },
-    { version: 'v4.6.0', date: '2025-05-20', detail: 'Stop Response logic & Guest Protocol v2 enabled' },
-    { version: 'v4.5.2', date: '2025-05-15', detail: 'Google Grounding optimized for Kshitiz Coder Nodes' }
-  ];
+  const [history, setHistory] = useState<Array<{id: string, title: string, date: number}>>([]);
 
   useEffect(() => {
-    const session = localStorage.getItem('azure_session_active');
-    const savedHistory = localStorage.getItem('azure_history_registry');
+    const session = localStorage.getItem('kshitiz_session_active');
+    const savedHistory = localStorage.getItem('kshitiz_history_registry');
     
     if (session) {
       try {
@@ -32,24 +25,18 @@ const App: React.FC = () => {
         setCurrentUser(parsedUser);
         setIsAuthorized(true);
       } catch (e) {
-        localStorage.removeItem('azure_session_active');
+        localStorage.removeItem('kshitiz_session_active');
       }
     }
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
     }
-
-    const handleResize = () => {
-      if (window.innerWidth > 1024) setIsSidebarOpen(true);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const saveToRegistry = (id: string, title: string, type: 'chat' | 'cmd') => {
+  const saveToHistory = (id: string, title: string) => {
     setHistory(prev => {
-      const newHistory = [{ id, title, date: Date.now(), type }, ...prev].slice(0, 50);
-      localStorage.setItem('azure_history_registry', JSON.stringify(newHistory));
+      const newHistory = [{ id, title, date: Date.now() }, ...prev].slice(0, 50);
+      localStorage.setItem('kshitiz_history_registry', JSON.stringify(newHistory));
       return newHistory;
     });
   };
@@ -59,174 +46,166 @@ const App: React.FC = () => {
     const inputUser = username.toLowerCase().trim();
     const inputPass = password.trim();
 
-    if (inputUser === 'kshitizmishra' && inputPass === '9845189548') {
-      const user = { name: 'KSHITIZ MISHRA', role: 'ROOT', authKey: '9845189548' };
+    // Owner Access Updated: kshitizmishra / 9845189
+    if (inputUser === 'kshitizmishra' && inputPass === '9845189') {
+      const user = { name: 'Kshitiz Coder', role: 'Level 9 Architect', isOwner: true };
       setCurrentUser(user);
       setIsAuthorized(true);
-      localStorage.setItem('azure_session_active', JSON.stringify(user));
+      localStorage.setItem('kshitiz_session_active', JSON.stringify(user));
       return;
     }
 
-    const registeredUsers = JSON.parse(localStorage.getItem('nexus_registered_users') || '[]');
-    const foundUser = registeredUsers.find((u: any) => u.name.toLowerCase() === inputUser && u.authKey === inputPass);
-    
-    if (foundUser) {
-      setCurrentUser(foundUser);
-      setIsAuthorized(true);
-      localStorage.setItem('azure_session_active', JSON.stringify(foundUser));
-    } else {
-      setError('AUTH_ERROR: ACCESS DENIED');
-    }
+    setError('ACCESS DENIED: Credentials mismatch.');
   };
 
   const handleGuestAccess = () => {
-    const guestUser = { name: 'GUEST_OPERATOR', role: 'VIP Guest', authKey: 'GUEST_MODE' };
+    const guestUser = { name: 'Guest User', role: 'Developer Access', isOwner: false };
     setCurrentUser(guestUser);
     setIsAuthorized(true);
-    localStorage.setItem('azure_session_active', JSON.stringify(guestUser));
+    localStorage.setItem('kshitiz_session_active', JSON.stringify(guestUser));
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('azure_session_active');
+    localStorage.removeItem('kshitiz_session_active');
     setCurrentUser(null);
     setIsAuthorized(false);
+    setIsSidebarOpen(false);
     setActiveTab('chat');
-    setUsername('');
-    setPassword('');
   };
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#05050d] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-600/10 via-transparent to-black pointer-events-none"></div>
-        <div className="w-full max-w-[340px] space-y-8 animate-astral relative z-10">
-          <div className="text-center space-y-4">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-cyan-400 to-indigo-600 rounded-[2rem] flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.3)] border border-white/10">
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-            </div>
-            <div>
-              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">AZURE.</h1>
-              <p className="text-blue-500 text-[8px] font-black uppercase tracking-[0.5em] mt-1">Kshitiz Mishra Labs</p>
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-[#000000] relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-black pointer-events-none"></div>
+        <div className="w-full max-w-[360px] space-y-12 animate-astral relative z-10 text-center">
+          <div className="space-y-4">
+            <svg className="w-16 h-16 mx-auto text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+            </svg>
+            <div className="space-y-1">
+              <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Kshitiz <span className="text-blue-500">Coders</span></h1>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em]">Proprietary Workspace</p>
             </div>
           </div>
-          <div className="bg-[#0d0d1a]/90 backdrop-blur-3xl p-6 rounded-[2.5rem] space-y-5 border border-white/5 shadow-2xl">
-            <div className="space-y-3">
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-[#161625] border border-white/5 text-white rounded-xl px-5 py-4 outline-none focus:border-blue-500/50 text-sm font-bold" placeholder="USERNAME" />
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-[#161625] border border-white/5 text-white rounded-xl px-5 py-4 outline-none focus:border-blue-500/50 text-sm font-bold" placeholder="AUTH KEY" />
-            </div>
-            <div className="space-y-2">
-              <button onClick={() => handleLogin()} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[11px] uppercase tracking-widest py-4 rounded-xl shadow-xl transition-transform active:scale-95">INITIALIZE_SESSION</button>
-              <button onClick={handleGuestAccess} className="w-full bg-white/5 hover:bg-white/10 text-slate-500 font-black text-[9px] uppercase tracking-widest py-3 rounded-xl border border-white/5 transition-all">GUEST_PROTOCOL</button>
-            </div>
-            {error && <p className="text-red-500/80 text-[8px] font-black text-center uppercase tracking-widest mt-1">{error}</p>}
+          <div className="space-y-4">
+            <input 
+              type="text" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              className="w-full bg-[#111111] border border-white/5 text-white rounded-2xl px-6 py-4 outline-none focus:ring-1 ring-blue-500/50 transition-all placeholder:text-slate-700 font-medium" 
+              placeholder="Username" 
+            />
+            <input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              className="w-full bg-[#111111] border border-white/5 text-white rounded-2xl px-6 py-4 outline-none focus:ring-1 ring-blue-500/50 transition-all placeholder:text-slate-700 font-medium" 
+              placeholder="Password" 
+            />
+            <button onClick={() => handleLogin()} className="w-full bg-blue-600 text-white font-black py-4 rounded-full shadow-2xl transition-all active:scale-95 uppercase tracking-widest text-xs mt-4 hover:bg-blue-500">Authorize Link</button>
+            <button onClick={handleGuestAccess} className="w-full text-slate-500 font-bold py-2 text-[10px] uppercase tracking-widest hover:text-blue-400 transition-colors">Enter as Guest</button>
           </div>
+          {error && <p className="text-red-500 text-[10px] font-black uppercase tracking-widest px-4">{error}</p>}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex bg-[#05050d] text-[#e3e3e3] overflow-hidden font-sans relative">
-      {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && window.innerWidth <= 1024 && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[45]" onClick={() => setIsSidebarOpen(false)} />
+    <div className="h-screen flex bg-[#000000] text-white overflow-hidden font-sans relative">
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[45]" onClick={() => setIsSidebarOpen(false)} />
       )}
 
       <aside className={`
-        ${isSidebarOpen ? 'translate-x-0 w-[300px]' : '-translate-x-full w-0 lg:w-0'} 
-        transition-all duration-500 ease-in-out flex flex-col bg-[#05050d] border-r border-white/5 z-50 
-        fixed lg:relative h-full overflow-hidden
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+        transition-transform duration-400 cubic-bezier(0.16, 1, 0.3, 1) flex flex-col bg-[#0a0a0a] w-[300px] z-50 
+        fixed top-0 bottom-0 left-0 overflow-hidden shadow-[20px_0_40px_rgba(0,0,0,0.8)] border-r border-white/5
       `}>
-        <div className="p-6 space-y-6 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        <div className="p-8 flex-1 overflow-y-auto space-y-8">
+           <div className="flex items-center gap-4 px-2 mb-10">
+              <svg className="w-7 h-7 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+              </svg>
+              <div className="leading-none">
+                <span className="font-black text-xl tracking-tighter block">KSHITIZ</span>
+                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Coders Node</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-[12px] font-black uppercase tracking-widest italic text-white leading-none">KSHITIZ.CORE</span>
-                <span className="text-[7px] font-black text-blue-500 uppercase tracking-widest mt-0.5">SYNC_ACTIVE</span>
-              </div>
-            </div>
-            {window.innerWidth <= 1024 && (
-               <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-600 p-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-            )}
-          </div>
-          <button onClick={() => { setActiveTab('chat'); setChatKey(k => k+1); if(window.innerWidth <= 1024) setIsSidebarOpen(false); }} className="w-full py-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all shadow-xl active:scale-[0.98] border border-white/10">NEW SYNTHESIS</button>
-          <nav className="space-y-1">
-            {[
-              { id: 'chat', label: 'WORKBENCH', icon: 'M4 6h16M4 12h16M4 18h16' },
-              { id: 'register', label: 'REGISTRY', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197' },
-              { id: 'update', label: 'SYSTEM_UP', icon: 'M13 10V3L4 14h7v7l9-11h-7z' }
-            ].map((nav) => (
-              (currentUser?.role === 'ROOT' || nav.id === 'chat') && (
-                <button key={nav.id} onClick={() => { setActiveTab(nav.id as any); if(window.innerWidth <= 1024) setIsSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === nav.id ? 'bg-white/5 text-blue-400 border border-white/5' : 'text-slate-600 hover:bg-white/5'}`}>
-                  <svg className={`w-4 h-4 ${activeTab === nav.id ? 'text-blue-500' : 'text-slate-700'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={nav.icon} /></svg>
-                  {nav.label}
-                </button>
-              )
-            ))}
-          </nav>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar">
-          <div className="mb-6">
-            <p className="text-[7px] font-black text-blue-500/50 uppercase tracking-[0.4em] mb-3 border-b border-white/5 pb-2">LOG_UPDATES</p>
-            <div className="space-y-2">
-              {appUpdates.map((update, idx) => (
-                <div key={idx} className="p-3 bg-white/5 rounded-lg border border-white/5 group hover:border-blue-500/30 transition-all cursor-default">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[8px] font-black text-white">{update.version}</span>
-                    <span className="text-[6px] font-bold text-slate-600">{update.date}</span>
-                  </div>
-                  <p className="text-[7px] text-slate-400 leading-tight uppercase font-medium">{update.detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+           </div>
 
-          <p className="text-[7px] font-black text-slate-800 uppercase tracking-[0.4em] mb-3 border-b border-white/5 pb-2">HISTORY</p>
-          <div className="space-y-1">
-            {history.map(item => (
-              <button key={item.id} className="w-full text-left py-1.5 px-3 rounded-md text-[9px] text-slate-600 hover:text-white truncate transition-all font-bold uppercase italic hover:bg-white/5">
-                {item.title}
-              </button>
-            ))}
-          </div>
+           <button onClick={() => { setActiveTab('chat'); setChatKey(k => k+1); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 px-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all group">
+              <svg className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+              New Project
+           </button>
+
+           <div className="space-y-2">
+              <p className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] mb-4">Memory Registry</p>
+              {history.length > 0 ? history.slice(0, 15).map(item => (
+                <button key={item.id} className="w-full text-left px-4 py-3 rounded-xl text-[12px] font-bold text-slate-400 hover:bg-white/5 truncate transition-all flex items-center gap-3">
+                   <div className="w-1.5 h-1.5 rounded-full bg-slate-800"></div>
+                   {item.title}
+                </button>
+              )) : (
+                <p className="px-4 text-[10px] text-slate-800 italic font-bold">Registry Empty</p>
+              )}
+           </div>
         </div>
-        
-        <div className="p-6 space-y-3 border-t border-white/5">
-          <div className="flex items-center gap-3 bg-[#0a0a14] p-3 rounded-xl border border-white/5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center font-black text-xs text-white">{currentUser?.name[0]}</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black truncate text-white uppercase tracking-tighter">{currentUser?.name}</p>
-              <p className="text-[7px] font-bold text-blue-500 uppercase tracking-widest">{currentUser?.role}</p>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="w-full py-3 bg-white/5 hover:bg-red-500/10 text-slate-600 hover:text-red-400 border border-white/5 hover:border-red-500/20 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] transition-all">TERMINATE</button>
+
+        <div className="p-6 space-y-2 border-t border-white/5 bg-[#050505]">
+           {currentUser?.isOwner && (
+             <button onClick={() => { setActiveTab('update'); setIsSidebarOpen(false); }} className="w-full flex items-center gap-4 px-4 py-4 text-[11px] text-blue-400 hover:bg-blue-400/5 rounded-2xl transition-all font-black uppercase tracking-widest border border-blue-500/20 mb-4">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                Architect Deck
+             </button>
+           )}
+           <div className="px-4 py-2">
+              <p className="text-[8px] text-slate-600 uppercase font-black tracking-[0.5em] mb-2">User Rank</p>
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${currentUser?.isOwner ? 'bg-blue-500 animate-pulse' : 'bg-slate-600'}`}></div>
+                <p className="text-[12px] font-black text-slate-300 uppercase truncate tracking-widest">{currentUser?.role}</p>
+              </div>
+           </div>
+           <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3 text-[10px] text-slate-600 font-black uppercase tracking-widest hover:text-red-500 transition-all mt-4">
+              Sign out node
+           </button>
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col relative overflow-hidden bg-[#05050d]">
-        <header className="px-4 lg:px-8 py-4 lg:py-6 flex items-center justify-between z-30">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 lg:p-3 bg-[#0d0d1a] rounded-lg text-slate-500 hover:text-white border border-white/10 transition-all">
-            <svg className={`w-5 h-5 transform transition-transform ${!isSidebarOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
-          </button>
-          <div className="flex items-center gap-4 lg:gap-6">
-            <div className="flex flex-col items-end">
-              <span className="text-[7px] lg:text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] lg:tracking-[0.6em] italic leading-none">KSHITIZ_NETWORK</span>
-              <span className="text-[6px] lg:text-[8px] font-black text-blue-500 uppercase tracking-widest mt-1">UPLINK_STABLE</span>
+      <main className="flex-1 flex flex-col relative bg-[#000000]">
+        <header className="px-6 py-4 flex items-center justify-between z-30 sticky top-0 bg-black/80 backdrop-blur-2xl border-b border-white/5">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-slate-400 hover:text-white transition-all">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <div className="flex flex-col">
+              <span className="font-black text-sm tracking-tighter uppercase italic">Kshitiz <span className="text-blue-500">Coders</span></span>
+              <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">v2.5 // Stable</span>
             </div>
-            <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-full border border-white/5 flex items-center justify-center relative overflow-hidden">
-               <div className="absolute inset-0 bg-blue-500/5 animate-pulse"></div>
-               <div className="w-1 lg:w-1.5 h-1 lg:h-1.5 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]"></div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {currentUser?.isOwner && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none">Architect lvl 9</span>
+              </div>
+            )}
+            <div className="w-10 h-10 rounded-2xl bg-[#111111] border border-white/10 flex items-center justify-center font-black text-blue-500 text-sm shadow-xl italic">
+              {currentUser?.name[0]}
             </div>
           </div>
         </header>
-        <div className="flex-1 relative">
-          {activeTab === 'chat' && <ChatInterface key={chatKey} onMessageSent={(t) => saveToRegistry(Date.now().toString(), t, 'chat')} currentUser={currentUser} />}
-          {activeTab === 'register' && <IdentityRegistryProtocol />}
-          {activeTab === 'update' && <AdminPanel onCommandExecuted={(t) => saveToRegistry(Date.now().toString(), t, 'cmd')} />}
+
+        <div className="flex-1 relative overflow-hidden">
+          {activeTab === 'chat' ? (
+            <ChatInterface 
+              key={chatKey} 
+              onMessageSent={(t) => saveToHistory(Date.now().toString(), t)} 
+              currentUser={currentUser} 
+            />
+          ) : (
+            <AdminPanel onCommandExecuted={(t) => saveToHistory(Date.now().toString(), t)} />
+          )}
         </div>
       </main>
     </div>
